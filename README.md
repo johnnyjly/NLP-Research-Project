@@ -21,14 +21,14 @@ The course project for CSC413 2024S
 - Tokenize Natural Language inputs.
 ### Model Building
 - Concatenate "experience", "job_location", "job_desig", "key_skills", "job_description"
-- Use "Salary" as target. We can try either of the two methods:\
-  -- Fine-Tune BERT by adding a linear layer and train the last epoch with our training data and target.
+- Use "Salary" as target.
+- Fine-Tune BERT by adding a linear layer and train the last epoch with our training data and target.
 - Use Bert Pre-trained model
 - No decoder, directly output a class
 ### Compare With Naive RNN
 - Hand code RNN, 2 version encoding
--   Word2Vec version
--   BERT feature version
+  - Word2Vec version
+  - BERT feature version
 - Compare output of same test inputs
 ### Report
 - 6-8 page report.
