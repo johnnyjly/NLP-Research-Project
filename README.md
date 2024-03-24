@@ -4,6 +4,12 @@ The course project for CSC413 2024S
 ## Project Target
 - Create an NLP model such that user enter job description and exerience in natural language, and output range of salary (Classification)
 
+## Links
+#### Dataset:
+- https://www.kaggle.com/datasets/jaiganeshnagidi/data-scientist-salary?resource=download
+#### How-to's
+- how to fine tune using bert: https://huggingface.co/docs/transformers/training
+
 ## Ideas
 - Use bert as pre-trained model, train with training dataset descriptions.
 - Discard job-category | company name; Keep job-description | job-requirements | experience category 
