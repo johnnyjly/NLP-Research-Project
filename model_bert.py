@@ -7,14 +7,15 @@ import torch, os, bert
 import pandas as pd
 import numpy as np
 import torch.nn as nn
+from transformers import BertTokenizer, BertModel
 
 class salaryBERT(nn.Module):
-    def __init__(self, bert, hidden_size, num_classes):
+    def __init__(self):
         super(salaryBERT, self).__init__()
-        # FIXME: Probably pretty wrong code here, need to fix
-        self.bert = bert
-        self.fc = nn.Linear(hidden_size, num_classes)
+        self.bert = BertModel.from_pretrained('bert-base-uncased')
+        self.fc = nn.Linear(self.bert.config.hidden_size, 2)
 
     def forward(self, input_ids, attention_mask):
-        # TODO
-        assert False, "Implement"
+        output = self.bert(input_ids=input_ids, attention_mask=attention_mask)
+        output = self.fc(output.pooler_output)
+        return output
