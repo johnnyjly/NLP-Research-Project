@@ -38,7 +38,7 @@ Columns of dataset:
 
 '''
 
-def preprocess_data(data_path):
+def preprocess_data_deprecated(data_path):
 
     # Step 0: Load data
     data = pd.read_csv(data_path)
@@ -85,5 +85,54 @@ def preprocess_data(data_path):
     # output_cols = ['string', 'target_l']
     data[output_cols].to_csv('./data/preprocessed.csv', index=False)
     return (skill_list, category_list, data[output_cols])
+
+
+def preprocess_data(data_path):
+
+    # Step 0: Load data
+    data = pd.read_csv(data_path)
+    data = data.dropna().drop(columns=['Rating', 'Revenue', 
+            'Competitors', 'Hourly', 'Employer provided', 'Company Name', 
+            'Job Location', 'job_title_sim', 'seniority_by_title', 'index', 
+            'Salary Estimate', 'Age', 'Avg Salary(K)'])
+
+    # Step 1: Concatenate the string parts
+    data['string'] = data['Job Title'] + '-' +\
+        data['Job Description'] + '-' +\
+        data['Location'] + '-' +\
+        data['Headquarters'] + '-' +\
+        data['company_txt'] + '-' +\
+        str(data['Founded'])
+    
+    # Step 2: Combine Bool columns into one number, converted from binary
+    skill_list = ['Python', 'spark', 'aws', 'excel', 'sql', 'sas', 'keras',
+                   'pytorch', 'scikit', 'tensor', 'hadoop', 'tableau', 'bi',
+                   'flink', 'mongo', 'google_an']
+    # Note: The order of skills is inverted to digits of binary number
+    #       e.g. 0b0000000000000001 implies only requiring Python
+    #            0b1000000000000000 implies only requiring google_an
+    data['skill_str'] = 'Required Skills:'
+    for skill in skill_list:
+        data['skill_str'] += '{};'.format(skill) if data[skill] else ''
+    
+    # Step 3: Convert categorical columns into numerical values
+    data.rename(columns={'Size': 'Company Size'}, inplace=True)
+    category_list = ['Company Size', 'Type of ownership', 'Industry', 
+                          'Sector', 'Degree']
+    data['category_str'] = ''
+    for category in category_list:
+        data['category_str'] += '{}: {};'.format(category, data[category])
+    data['string'] += data['skill_str'] + data['category_str']
+
+    # Step 4: Create target columns
+    data['target_l'] = data['Lower Salary'] 
+    data['target_u'] = data['Upper Salary']
+
+    # Step 5: Select Processed Outputs
+    output_cols = ['string', 'target_l', 'target_u']
+    # output_cols = ['string', 'target_l']
+    data[output_cols].to_csv('./data/preprocessed.csv', index=False)
+    return data[output_cols]
+
 
 preprocess_data('./data/data_cleaned_2021.csv')
