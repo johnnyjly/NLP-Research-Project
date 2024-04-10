@@ -20,7 +20,7 @@ pip3 install -r requirements.txt
 
 #### Dataset:
 
-- https://www.kaggle.com/datasets/andrewmvd/data-analyst-jobs
+- https://www.kaggle.com/datasets/nikhilbhathi/data-scientist-salary-us-glassdoor
 
 #### How-to's
 
