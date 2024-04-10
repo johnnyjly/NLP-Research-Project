@@ -18,34 +18,73 @@ from model_RNN import salaryRNN
 from model_bert import salaryBERT
 
 
+def accuracy(model, dataset, max=1000):
+    """
+    Estimate the accuracy of `model` over the `dataset`.
+    Calculate the accuracy as the proportion of intersection/union.
+
+    Parameters:
+        `model`   - An object of class nn.Module
+        `dataset` - A dataset of the same type as `train_data`.
+        `max`     - The max number of samples to use to estimate
+                    model accuracy
+
+    Returns: a floating-point value between 0 and 1.
+    """
+    # TODO
 
 
-def plot_loss():
+def plot_loss(iters, train_loss, train_acc):
     # TODO: Plot loss and accuracy respect to epoch here
-    assert False, 'plot_loss function not implemented'
+    plt.figure()
+    plt.plot(iters[:len(train_loss)], train_loss)
+    plt.title("Loss over iterations")
+    plt.xlabel("Iterations")
+    plt.ylabel("Loss")
+
+    plt.figure()
+    plt.plot(iters[:len(train_acc)], train_acc)
+    plt.title("Accuracy over iterations")
+    plt.xlabel("Iterations")
+    plt.ylabel("Loss")
 
 
-def train(model, train_loader, criterion, device, epochs):
+def train(model, train_loader, criterion, device, epochs, plot_every=50, plot=True):
     model.train()
     optimizer = torch.optim.Adam(model.parameters(), lr=2e-5)
-    for epoch in range(epochs):
-        total_loss = 0
-        for batch in train_loader:
-            input_ids = batch['input_ids'].to(device)
-            targets = batch['targets'].to(device)
-            if model.__class__.__name__ == 'salaryBERT':
-                attention_mask = batch['attention_mask'].to(device)
-                outputs = model(input_ids, attention_mask)
-            elif model.__class__.__name__ == 'salaryRNN':
-                outputs = model(input_ids)
-            optimizer.zero_grad()
-            loss = criterion(outputs, targets)
-            total_loss += loss.item()
-            loss.backward()
-            optimizer.step()
-        avg_loss = total_loss / len(train_loader)
-        print(f'Epoch {epoch} : Average Loss {avg_loss}')
-    torch.save(model.state_dict(), 'model.pth')
+    iters, train_loss, train_acc = [], [], []
+    iter_count = 0
+    try:
+        for epoch in range(epochs):
+            total_loss = 0
+            for batch in train_loader:
+                input_ids = batch['input_ids'].to(device)
+                targets = batch['targets'].to(device)
+                if model.__class__.__name__ == 'salaryBERT':
+                    attention_mask = batch['attention_mask'].to(device)
+                    outputs = model(input_ids, attention_mask)
+                elif model.__class__.__name__ == 'salaryRNN':
+                    outputs = model(input_ids)
+                optimizer.zero_grad()
+                loss = criterion(outputs, targets)
+                total_loss += loss.item()
+                loss.backward()
+                optimizer.step()
+
+                iter_count += 1
+                if iter_count % plot_every == 0:
+                    iters.append(iter_count)
+                    ta = accuracy(model, train_data)
+                    train_loss.append(float(loss))
+                    train_acc.append(ta)
+                    print(iter_count, "Loss:", float(loss), "Train Acc:", ta)
+
+            avg_loss = total_loss / len(train_loader)
+            print(f'Epoch {epoch} : Average Loss {avg_loss}')
+        torch.save(model.state_dict(), 'model.pth')
+    finally:
+        plot_loss(iters, train_loss, train_acc)
+
 
 def compute_loss(outputs, targets):
     lower_loss = torch.nn.functional.mse_loss(outputs[:, 0], targets[:, 0])
