@@ -12,6 +12,12 @@ from sklearn.model_selection import train_test_split
 from transformers import AutoTokenizer
 
 from preprocess import preprocess_data
+from model_bert_featurebase import BertFeature
+from model_bert_rnn import BertRNN
+from model_RNN import salaryRNN
+from model_bert import salaryBERT
+
+
 
 
 def plot_loss():
@@ -65,14 +71,17 @@ def evalute(model, test_loader, criterion, device):
     print(f'Average Loss on Test Set: {avg_loss}')
 
 def tokenize_data(data, tokenizer):
-    return tokenizer(data['string'].tolist(), padding='max_length', truncation=True)
+    encodings = tokenizer(data['text'].tolist(), padding='max_length', truncation=True, return_tensors='pt')
+    encodings['labels'] = data['labels']
+    return encodings
+    
     # return tokenizer(data['string'].tolist(), padding='max_length', truncation=True, return_tensors='pt', return_labels=True)
                   
     
 def main():
     # Get preprocessed data
     data_path = './data/data_cleaned_2021.csv'
-    skill_list, category_list, data = preprocess_data(data_path)
+    data = preprocess_data(data_path)
 
     # Split train and test data
     tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
@@ -80,6 +89,7 @@ def main():
     train_dataset, test_dataset = train_test_split(tokenize_dataset, test_size=0.2)
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
+    #之后可以加上validation，train里面还没有写validation的部分
     
     #hyperparameters
     epochs = 5
@@ -88,6 +98,7 @@ def main():
     learning_rate = 0.0001
  
     # models 
+    model = salaryBERT()
     
     # Training Loop
     # TODO
