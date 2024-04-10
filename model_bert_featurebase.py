@@ -6,7 +6,7 @@ from transformers import BertTokenizer, BertModel
 
 class BertFeature(nn.Module):
     def __init__(self, rnn_hidden_size, num_layers,bidirectional):
-        super(BertRNN, self).__init__()
+        super(BertFeature, self).__init__()
         self.bert = BertModel.from_pretrained('bert-base-uncased', output_hidden_states=True)
         self.rnn = nn.GRU(self.bert.config.hidden_size, rnn_hidden_size, num_layers, batch_first=True, bidirectional= bidirectional)
         self.fc = nn.Linear(rnn_hidden_size*2 if bidirectional else rnn_hidden_size, 2)
