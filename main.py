@@ -66,12 +66,13 @@ def evalute(model, test_loader, criterion, device):
 
 def tokenize_data(data, tokenizer):
     return tokenizer(data['string'].tolist(), padding='max_length', truncation=True)
+    # return tokenizer(data['string'].tolist(), padding='max_length', truncation=True, return_tensors='pt', return_labels=True)
                   
     
 def main():
     # Get preprocessed data
-    data_path = 'data/preprocessed_data.csv'
-    data = preprocess_data(data_path)
+    data_path = './data/data_cleaned_2021.csv'
+    skill_list, category_list, data = preprocess_data(data_path)
 
     # Split train and test data
     tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')

@@ -82,7 +82,8 @@ def preprocess_data(data_path):
     # Step 5: Select Processed Outputs
     output_cols = ['string', 'skills', 'Size', 'Type of ownership', 'Industry', 
                    'Sector', 'Degree', 'target_l', 'target_u']
-    
+    # output_cols = ['string', 'target_l']
+    data[output_cols].to_csv('./data/preprocessed.csv', index=False)
     return (skill_list, category_list, data[output_cols])
 
 preprocess_data('./data/data_cleaned_2021.csv')
