@@ -6,6 +6,7 @@ import os, bert
 import pandas as pd
 import numpy as np
 import torch.nn as nn
+import matplotlib.pyplot as plt
 
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
@@ -31,7 +32,25 @@ def accuracy(model, dataset, max=1000):
 
     Returns: a floating-point value between 0 and 1.
     """
-    # TODO
+    correct, total = 0, 0
+    dataloader = DataLoader(dataset,
+                            batch_size=1,  # use batch size 1 to prevent padding
+                            shuffle=True)
+    acc = []
+    for i, (x, t) in enumerate(dataloader):
+        y = model(x)
+        lower = max(y[0], t[0])
+        upper = min(y[1], t[1])
+
+        if lower <= upper:
+            prop = (upper - lower) / (max(y[1], t[1]) - min(y[0], t[0]))
+            acc.append(prop)
+        else:
+            acc.append(0)
+
+        if i >= max:
+            break
+    return sum(acc)/max
 
 
 def plot_loss(iters, train_loss, train_acc):
@@ -49,7 +68,7 @@ def plot_loss(iters, train_loss, train_acc):
     plt.ylabel("Loss")
 
 
-def train(model, train_loader, criterion, device, epochs, plot_every=50, plot=True):
+def train(model, train_data, train_loader, criterion, device, epochs, plot_every=50, plot=True):
     model.train()
     optimizer = torch.optim.Adam(model.parameters(), lr=2e-5)
     iters, train_loss, train_acc = [], [], []
@@ -139,16 +158,13 @@ def main():
     # models 
     model = salaryBERT()
     
-    # Training Loop
-    # TODO
-    train(model, train_loader, criterion, device, epochs, learning_rate)
+    # Training Loop & plot
+    train(model, train_dataset, train_loader, criterion, device, epochs)
 
     # Evalute Loop 
     # TODO
     evalute(model, test_loader, criterion, device)
 
-    # plot 
-    # TODO
 
 
 if __name__ == '__main__':
