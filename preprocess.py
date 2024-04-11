@@ -136,5 +136,5 @@ def preprocess_data(data_path):
     data[output_cols].to_csv('./data/preprocessed.csv', index=False)
     return data[output_cols]
 
-
-print(preprocess_data('./data/data_cleaned_2021.csv'))
+if __name__ == '__main__':
+    preprocess_data('./data/data_cleaned_2021.csv')
