@@ -44,7 +44,7 @@ def preprocess_data_deprecated(data_path):
     data = pd.read_csv(data_path)
     data = data.dropna().drop(columns=['Rating', 'Revenue', 
             'Competitors', 'Hourly', 'Employer provided', 'Company Name', 
-            'Job Location', 'job_title_sim', 'seniority_by_title', 'index', 
+            'Job Location', 'job_title_sim', 'seniority_by_title',  
             'Salary Estimate', 'Age', 'Avg Salary(K)'])
 
     # Step 1: Concatenate the string parts
@@ -93,8 +93,10 @@ def preprocess_data(data_path):
     data = pd.read_csv(data_path)
     data = data.dropna().drop(columns=['Rating', 'Revenue', 
             'Competitors', 'Hourly', 'Employer provided', 'Company Name', 
-            'Job Location', 'job_title_sim', 'seniority_by_title', 'index', 
+            'Job Location', 'job_title_sim', 'seniority_by_title',
             'Salary Estimate', 'Age', 'Avg Salary(K)'])
+    
+    data.set_index('index', inplace=True)
 
     # Step 1: Concatenate the string parts
     data['string'] = data['Job Title'] + '-' +\
@@ -102,7 +104,7 @@ def preprocess_data(data_path):
         data['Location'] + '-' +\
         data['Headquarters'] + '-' +\
         data['company_txt'] + '-' +\
-        str(data['Founded'])
+        data['Founded'].astype(str)
     
     # Step 2: Combine Bool columns into one number, converted from binary
     skill_list = ['Python', 'spark', 'aws', 'excel', 'sql', 'sas', 'keras',
@@ -113,7 +115,8 @@ def preprocess_data(data_path):
     #            0b1000000000000000 implies only requiring google_an
     data['skill_str'] = 'Required Skills:'
     for skill in skill_list:
-        data['skill_str'] += '{};'.format(skill) if data[skill] else ''
+        data.loc[data[skill], 'skill_str'] += '{};'.format(skill)
+    data.loc[data['skill_str']=='Required Skills:', 'skill_str'] = ''
     
     # Step 3: Convert categorical columns into numerical values
     data.rename(columns={'Size': 'Company Size'}, inplace=True)
@@ -121,12 +124,11 @@ def preprocess_data(data_path):
                           'Sector', 'Degree']
     data['category_str'] = ''
     for category in category_list:
-        data['category_str'] += '{}: {};'.format(category, data[category])
-    data['string'] += data['skill_str'] + data['category_str']
+        data['category_str'] = data.apply(lambda x: '{}{}: {};'.format(x.category_str, category, x[category]), axis=1)
+    data['string'] = data['string'] + data['skill_str'] + data['category_str']
 
     # Step 4: Create target columns
-    data['target_l'] = data['Lower Salary'] 
-    data['target_u'] = data['Upper Salary']
+    data.rename(columns={'Lower Salary': 'target_l', 'Upper Salary': 'target_u'}, inplace=True)
 
     # Step 5: Select Processed Outputs
     output_cols = ['string', 'target_l', 'target_u']
@@ -135,4 +137,4 @@ def preprocess_data(data_path):
     return data[output_cols]
 
 
-preprocess_data('./data/data_cleaned_2021.csv')
+print(preprocess_data('./data/data_cleaned_2021.csv'))
