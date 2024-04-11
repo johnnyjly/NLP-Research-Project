@@ -111,9 +111,12 @@ def preprocess_data(data_path):
     # Note: The order of skills is inverted to digits of binary number
     #       e.g. 0b0000000000000001 implies only requiring Python
     #            0b1000000000000000 implies only requiring google_an
-    data['skill_str'] = 'Required Skills:'
-    for skill in skill_list:
-        data['skill_str'] += '{};'.format(skill) if data[skill] else ''
+    
+    data['skill_str'] = data[skill_list].apply(
+        lambda row: 'Required Skills: 0b' + ''.join(row.astype(str)),
+        axis=1
+    )
+    # print(data['skill_str'])
     
     # Step 3: Convert categorical columns into numerical values
     data.rename(columns={'Size': 'Company Size'}, inplace=True)
