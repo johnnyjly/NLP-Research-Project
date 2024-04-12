@@ -129,21 +129,27 @@ def evalute(model, test_loader, criterion, device):
     print(f'Average Loss on Test Set: {avg_loss}')
 
 def tokenize_data(data, tokenizer):
-    encodings = tokenizer(data['text'].tolist(), padding='max_length', truncation=True, return_tensors='pt')
-    encodings['labels'] = data['labels']
+    encodings = tokenizer(data['string'], padding='max_length', truncation=True, return_tensors='pt')
+    encodings['targets'] = torch.tensor([data['target_l'], data['target_u']])
     return encodings
     
     # return tokenizer(data['string'].tolist(), padding='max_length', truncation=True, return_tensors='pt', return_labels=True)
                   
     
 def main():
+    # Disable parallelism to avoid deadlocks
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    
     # Get preprocessed data
     data_path = './data/data_cleaned_2021.csv'
     data = preprocess_data(data_path)
 
     # Split train and test data
     tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
-    tokenize_dataset = data.map(lambda x: tokenize_data(x, tokenizer), batched=True)
+    tokenize_dataset = data.apply(
+        lambda x: tokenize_data(x, tokenizer),
+        axis=1
+    )
     train_dataset, test_dataset = train_test_split(tokenize_dataset, test_size=0.2)
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
