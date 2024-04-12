@@ -130,7 +130,7 @@ def evalute(model, test_loader, criterion, device):
 
 def tokenize_data(data, tokenizer):
     encodings = tokenizer(data['string'], padding='max_length', truncation=True, return_tensors='pt')
-    encodings['targets'] = torch.tensor([data['target_l'], data['target_u']])
+    encodings['targets'] = torch.FloatTensor([data['target_l'], data['target_u']])
     return encodings
     
     # return tokenizer(data['string'].tolist(), padding='max_length', truncation=True, return_tensors='pt', return_labels=True)
