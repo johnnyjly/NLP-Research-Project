@@ -77,10 +77,10 @@ def train(model, train_data, train_loader, criterion, device, epochs, plot_every
         for epoch in range(epochs):
             total_loss = 0
             for batch in train_loader:
-                input_ids = batch['input_ids'].to(device)
+                input_ids = batch['input_ids'].to(device).squeeze(1)
                 targets = batch['targets'].to(device)
                 if model.__class__.__name__ == 'salaryBERT':
-                    attention_mask = batch['attention_mask'].to(device)
+                    attention_mask = batch['attention_mask'].to(device).squeeze(1)
                     outputs = model(input_ids, attention_mask)
                 elif model.__class__.__name__ == 'salaryRNN':
                     outputs = model(input_ids)
@@ -116,10 +116,10 @@ def evalute(model, test_loader, criterion, device):
     total_loss = 0
     with torch.no_grad():
         for batch in test_loader:
-            input_ids = batch['input_ids'].to(device)
+            input_ids = batch['input_ids'].to(device).squeeze(1)
             targets = batch['targets'].to(device)
             if model.__class__.__name__ == 'salaryBERT':
-                attention_mask = batch['attention_mask'].to(device)
+                attention_mask = batch['attention_mask'].to(device).squeeze(1)
                 outputs = model(input_ids, attention_mask)
             elif model.__class__.__name__ == 'salaryRNN':
                 outputs = model(input_ids)
@@ -134,8 +134,7 @@ def tokenize_data(data, tokenizer):
     return encodings
     
     # return tokenizer(data['string'].tolist(), padding='max_length', truncation=True, return_tensors='pt', return_labels=True)
-                  
-    
+        
 def main():
     # Disable parallelism to avoid deadlocks
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -151,6 +150,11 @@ def main():
         axis=1
     )
     train_dataset, test_dataset = train_test_split(tokenize_dataset, test_size=0.2)
+    
+    # Reset indices after split
+    train_dataset.reset_index(drop=True, inplace=True)
+    test_dataset.reset_index(drop=True, inplace=True)
+    
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
     #之后可以加上validation，train里面还没有写validation的部分
