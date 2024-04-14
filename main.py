@@ -2,13 +2,12 @@
 # Main entry point for the application #
 # ==================================== #
 import torch
-import os, bert
-import pandas as pd
-import numpy as np
-import torch.nn as nn
+import os
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 from torch.utils.data import DataLoader
+from torch.utils.data.dataloader import default_collate
 from sklearn.model_selection import train_test_split
 from transformers import AutoTokenizer
 
@@ -19,7 +18,7 @@ from model_RNN import salaryRNN
 from model_bert import salaryBERT
 
 
-def accuracy(model, dataset, max=1000):
+def accuracy(model, dataset, n_max=1000):
     """
     Estimate the accuracy of `model` over the `dataset`.
     Calculate the accuracy as the proportion of intersection/union.
@@ -37,8 +36,14 @@ def accuracy(model, dataset, max=1000):
                             batch_size=1,  # use batch size 1 to prevent padding
                             shuffle=True)
     acc = []
-    for i, (x, t) in enumerate(dataloader):
-        y = model(x)
+    for i, d in enumerate(dataloader):
+        x, t = d['input_ids'].squeeze(1), d['targets'].squeeze(0)
+        if model.__class__.__name__ == 'salaryBERT':
+            attention_mask = d['attention_mask'].squeeze(1)
+            y = model(x, attention_mask)
+        else:
+            y = model(x)
+        y = y.squeeze(0)
         lower = max(y[0], t[0])
         upper = min(y[1], t[1])
 
@@ -48,9 +53,9 @@ def accuracy(model, dataset, max=1000):
         else:
             acc.append(0)
 
-        if i >= max:
+        if i >= n_max:
             break
-    return sum(acc)/max
+    return sum(acc)/min(n_max, i)
 
 
 def plot_loss(iters, train_loss, train_acc):
@@ -60,15 +65,18 @@ def plot_loss(iters, train_loss, train_acc):
     plt.title("Loss over iterations")
     plt.xlabel("Iterations")
     plt.ylabel("Loss")
+    plt.savefig("loss.png")
 
+    plt.clf()
     plt.figure()
     plt.plot(iters[:len(train_acc)], train_acc)
     plt.title("Accuracy over iterations")
     plt.xlabel("Iterations")
-    plt.ylabel("Loss")
+    plt.ylabel("Accuracy")
+    plt.savefig("accuracy.png")
 
 
-def train(model, train_data, train_loader, criterion, device, epochs, plot_every=50, plot=True):
+def train(model, train_data, train_loader, criterion, epochs, plot_every=50, plot=True):
     model.train()
     optimizer = torch.optim.Adam(model.parameters(), lr=2e-5)
     iters, train_loss, train_acc = [], [], []
@@ -76,16 +84,18 @@ def train(model, train_data, train_loader, criterion, device, epochs, plot_every
     try:
         for epoch in range(epochs):
             total_loss = 0
-            for batch in train_loader:
-                input_ids = batch['input_ids'].to(device).squeeze(1)
-                targets = batch['targets'].to(device)
+            print(f"Epoch {epoch}")
+            for batch in tqdm(train_loader):
+                # Debugging
+                input_ids = batch['input_ids'].squeeze(1)
+                targets = batch['targets']
                 if model.__class__.__name__ == 'salaryBERT':
-                    attention_mask = batch['attention_mask'].to(device).squeeze(1)
+                    attention_mask = batch['attention_mask'].squeeze(1)
                     outputs = model(input_ids, attention_mask)
                 elif model.__class__.__name__ == 'salaryRNN':
                     outputs = model(input_ids)
                 optimizer.zero_grad()
-                loss = criterion(outputs, targets)
+                loss = compute_loss(criterion, outputs, targets)
                 total_loss += loss.item()
                 loss.backward()
                 optimizer.step()
@@ -105,21 +115,19 @@ def train(model, train_data, train_loader, criterion, device, epochs, plot_every
         plot_loss(iters, train_loss, train_acc)
 
 
-def compute_loss(outputs, targets):
-    lower_loss = torch.nn.functional.mse_loss(outputs[:, 0], targets[:, 0])
-    upper_loss = torch.nn.functional.mse_loss(outputs[:, 1], targets[:, 1])
-    return lower_loss + upper_loss
+def compute_loss(criterion, outputs, targets):
+    return criterion(outputs[:, 0], targets[:, 0]) + criterion(outputs[:, 1], targets[:, 1])
 
 
-def evalute(model, test_loader, criterion, device):
+def evalute(model, test_loader, criterion):
     model.eval()
     total_loss = 0
     with torch.no_grad():
         for batch in test_loader:
-            input_ids = batch['input_ids'].to(device).squeeze(1)
-            targets = batch['targets'].to(device)
+            input_ids = batch['input_ids'].squeeze(1)
+            targets = batch['targets']
             if model.__class__.__name__ == 'salaryBERT':
-                attention_mask = batch['attention_mask'].to(device).squeeze(1)
+                attention_mask = batch['attention_mask'].squeeze(1)
                 outputs = model(input_ids, attention_mask)
             elif model.__class__.__name__ == 'salaryRNN':
                 outputs = model(input_ids)
@@ -128,9 +136,9 @@ def evalute(model, test_loader, criterion, device):
     avg_loss = total_loss / len(test_loader)
     print(f'Average Loss on Test Set: {avg_loss}')
 
-def tokenize_data(data, tokenizer):
-    encodings = tokenizer(data['string'], padding='max_length', truncation=True, return_tensors='pt')
-    encodings['targets'] = torch.FloatTensor([data['target_l'], data['target_u']])
+def tokenize_data(data, tokenizer, device):
+    encodings = tokenizer(data['string'], padding='max_length', truncation=True, return_tensors='pt').to(device)
+    encodings['targets'] = torch.FloatTensor([data['target_l'], data['target_u']]).to(device)
     return encodings
     
     # return tokenizer(data['string'].tolist(), padding='max_length', truncation=True, return_tensors='pt', return_labels=True)
@@ -138,6 +146,8 @@ def tokenize_data(data, tokenizer):
 def main():
     # Disable parallelism to avoid deadlocks
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print("Current Device: {}".format(device))
     
     # Get preprocessed data
     data_path = './data/data_cleaned_2021.csv'
@@ -146,14 +156,17 @@ def main():
     # Split train and test data
     tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
     tokenize_dataset = data.apply(
-        lambda x: tokenize_data(x, tokenizer),
+        lambda x: tokenize_data(x, tokenizer, device),
         axis=1
     )
+
+    tokenize_dataset = tokenize_dataset.tolist()
+
     train_dataset, test_dataset = train_test_split(tokenize_dataset, test_size=0.2)
     
     # Reset indices after split
-    train_dataset.reset_index(drop=True, inplace=True)
-    test_dataset.reset_index(drop=True, inplace=True)
+    # train_dataset.reset_index(drop=True, inplace=True)
+    # test_dataset.reset_index(drop=True, inplace=True)
     
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
@@ -161,19 +174,21 @@ def main():
     
     #hyperparameters
     epochs = 5
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    criterion = compute_loss
+    criterion = torch.nn.MSELoss().to(device)
     learning_rate = 0.0001
  
     # models 
     model = salaryBERT()
+    model.to(device)
     
+    print("Start Training")
     # Training Loop & plot
-    train(model, train_dataset, train_loader, criterion, device, epochs)
+    train(model, train_dataset, train_loader, criterion, epochs)
 
     # Evalute Loop 
     # TODO
-    evalute(model, test_loader, criterion, device)
+    print("Start Evaluation")
+    evalute(model, test_loader, criterion)
 
 
 
