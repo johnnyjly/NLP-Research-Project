@@ -76,9 +76,9 @@ def plot_loss(iters, train_loss, train_acc):
     plt.savefig("accuracy.png")
 
 
-def train(model, train_data, train_loader, criterion, epochs, plot_every=50, plot=True):
+def train(model, train_data, train_loader, criterion, epochs, plot_every=50, plot=True, learning_rate=0.0001):
     model.train()
-    optimizer = torch.optim.Adam(model.parameters(), lr=2e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     iters, train_loss, train_acc = [], [], []
     iter_count = 0
     try:
@@ -131,7 +131,8 @@ def evalute(model, test_loader, criterion):
                 outputs = model(input_ids, attention_mask)
             elif model.__class__.__name__ == 'salaryRNN':
                 outputs = model(input_ids)
-            loss = criterion(outputs, targets)
+            loss = compute_loss(criterion, outputs, targets)
+            print(outputs, targets)
             total_loss += loss.item()
     avg_loss = total_loss / len(test_loader)
     print(f'Average Loss on Test Set: {avg_loss}')
@@ -183,7 +184,7 @@ def main():
     
     print("Start Training")
     # Training Loop & plot
-    train(model, train_dataset, train_loader, criterion, epochs)
+    train(model, train_dataset, train_loader, criterion, epochs, learning_rate)
 
     # Evalute Loop 
     # TODO
