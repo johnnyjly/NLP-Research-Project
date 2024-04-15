@@ -93,7 +93,7 @@ def train(model, train_data, train_loader, criterion, epochs, plot_every=50, plo
                 targets = batch['targets']
                 
                 if model.__class__.__name__ == 'salaryRNN':
-                    outputs = model(input_ids)
+                    outputs = model(input_ids)  
                 else:
                     attention_mask = batch['attention_mask'].squeeze(1)
                     outputs = model(input_ids, attention_mask)
@@ -190,6 +190,7 @@ def main():
  
     # models 
     # model = salaryRNN(512, 2, True)       # Same output for all inputs
+    # model = salaryRNN(tokenizer.vocab_size, 300, 512, 1, 2, True)
     # model = BertRNN(512, 2, True)
     # model = BertFeature(512, 2, True)
     model = salaryBERT()
