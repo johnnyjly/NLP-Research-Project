@@ -38,11 +38,13 @@ def accuracy(model, dataset, n_max=1000):
     acc = []
     for i, d in enumerate(dataloader):
         x, t = d['input_ids'].squeeze(1), d['targets'].squeeze(0)
-        if model.__class__.__name__ == 'salaryBERT':
+        
+        if model.__class__.__name__ == 'salaryRNN':
+            y = model(x)
+        else:
             attention_mask = d['attention_mask'].squeeze(1)
             y = model(x, attention_mask)
-        else:
-            y = model(x)
+            
         y = y.squeeze(0)
         lower = max(y[0], t[0])
         upper = min(y[1], t[1])
@@ -89,11 +91,13 @@ def train(model, train_data, train_loader, criterion, epochs, plot_every=50, plo
                 # Debugging
                 input_ids = batch['input_ids'].squeeze(1)
                 targets = batch['targets']
-                if model.__class__.__name__ == 'salaryBERT':
+                
+                if model.__class__.__name__ == 'salaryRNN':
+                    outputs = model(input_ids)
+                else:
                     attention_mask = batch['attention_mask'].squeeze(1)
                     outputs = model(input_ids, attention_mask)
-                elif model.__class__.__name__ == 'salaryRNN':
-                    outputs = model(input_ids)
+                    
                 optimizer.zero_grad()
                 loss = compute_loss(criterion, outputs, targets)
                 total_loss += loss.item()
@@ -119,23 +123,25 @@ def compute_loss(criterion, outputs, targets):
     return criterion(outputs[:, 0], targets[:, 0]) + criterion(outputs[:, 1], targets[:, 1])
 
 
-def evalute(model, test_loader, criterion):
+def evalute(model, test_data, test_loader, criterion):
     model.eval()
     total_loss = 0
     with torch.no_grad():
         for batch in test_loader:
             input_ids = batch['input_ids'].squeeze(1)
             targets = batch['targets']
-            if model.__class__.__name__ == 'salaryBERT':
+            
+            if model.__class__.__name__ == 'salaryRNN':
+                outputs = model(input_ids)
+            else:
                 attention_mask = batch['attention_mask'].squeeze(1)
                 outputs = model(input_ids, attention_mask)
-            elif model.__class__.__name__ == 'salaryRNN':
-                outputs = model(input_ids)
+                
             loss = compute_loss(criterion, outputs, targets)
             print(outputs, targets)
             total_loss += loss.item()
     avg_loss = total_loss / len(test_loader)
-    acc = accuracy(model, test_loader)
+    acc = accuracy(model, test_data)
     print(f'Average Loss on Test Set: {avg_loss}, Average Accuracy: {acc}')
 
 def tokenize_data(data, tokenizer, device):
@@ -177,10 +183,13 @@ def main():
     #hyperparameters
     epochs = 5
     criterion = torch.nn.MSELoss().to(device)
-    learning_rate = 0.0001
+    learning_rate = 2e-5
  
     # models 
-    model = salaryBERT()
+    # model = salaryRNN(512, 2, True)
+    # model = BertRNN(512, 2, True)
+    model = BertFeature(512, 2, True)
+    # model = salaryBERT()
     model.to(device)
     
     print("Start Training")
@@ -190,7 +199,7 @@ def main():
     # Evalute Loop 
     # TODO
     print("Start Evaluation")
-    evalute(model, test_loader, criterion)
+    evalute(model, test_dataset, test_loader, criterion)
 
 
 
