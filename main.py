@@ -103,7 +103,7 @@ def train(model, train_data, train_loader, criterion, epochs, plot_every=50, plo
                 loss.backward()
                 optimizer.step()
 
-
+                # TODO: Validation Set Accuracy and Loss - Kurt
                 iter_count += 1
                 if iter_count % plot_every == 0:
                     iters.append(iter_count)
@@ -114,8 +114,11 @@ def train(model, train_data, train_loader, criterion, epochs, plot_every=50, plo
 
             avg_loss = total_loss / len(train_loader)
             print(f'Epoch {epoch} : Average Loss {avg_loss}')
+            
+        # TODO: Set up Checkpoint and Early Stopping
         torch.save(model.state_dict(), 'model.pth')
     finally:
+        # TODO: Fix plotting - Fred
         plot_loss(iters, train_loss, train_acc)
 
 
@@ -153,6 +156,9 @@ def tokenize_data(data, tokenizer, device):
     # return tokenizer(data['string'].tolist(), padding='max_length', truncation=True, return_tensors='pt', return_labels=True)
         
 def main():
+    
+    # TODO: Argparse -Johnny
+    
     # Disable parallelism to avoid deadlocks
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -186,8 +192,7 @@ def main():
     criterion = torch.nn.MSELoss().to(device)
     learning_rate = 2e-5
  
-    # models 
-    # model = salaryRNN(512, 2, True)       # Same output for all inputs
+    # models  
     # model = salaryRNN(tokenizer.vocab_size, 300, 512, 1, 2, True)
     # model = BertRNN(512, 2, True)
     model = BertFeature(512, 2, True)
