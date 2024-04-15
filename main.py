@@ -2,7 +2,7 @@
 # Main entry point for the application #
 # ==================================== #
 import torch
-import os
+import os, argparse, random
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
@@ -16,7 +16,6 @@ from model_bert_featurebase import BertFeature
 from model_bert_rnn import BertRNN
 from model_RNN import salaryRNN
 from model_bert import salaryBERT
-
 
 def accuracy(model, dataset, n_max=1000):
     """
@@ -155,7 +154,7 @@ def tokenize_data(data, tokenizer, device):
     
     # return tokenizer(data['string'].tolist(), padding='max_length', truncation=True, return_tensors='pt', return_labels=True)
         
-def main():
+def main(args: argparse.Namespace):
     
     # TODO: Argparse -Johnny
     
@@ -165,7 +164,7 @@ def main():
     print("Current Device: {}".format(device))
     
     # Get preprocessed data
-    data_path = './data/data_cleaned_2021.csv'
+    data_path = args.data_path
     data = preprocess_data(data_path)
 
     # Split train and test data
@@ -183,22 +182,28 @@ def main():
     # train_dataset.reset_index(drop=True, inplace=True)
     # test_dataset.reset_index(drop=True, inplace=True)
     
-    train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=10, shuffle=False)
+    batch_size = args.batch_size
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     #之后可以加上validation，train里面还没有写validation的部分
     
     #hyperparameters
-    epochs = 100
+    epochs = args.epochs
     criterion = torch.nn.MSELoss().to(device)
-    learning_rate = 2e-5
- 
-    # models  
-    # model = salaryRNN(tokenizer.vocab_size, 300, 512, 1, 2, True)
-    # model = BertRNN(512, 2, True)
-    model = BertFeature(512, 2, True)
-    # model = salaryBERT()
-    for param in model.bert.parameters():
-        param.requires_grad = False
+    learning_rate = args.lr
+    
+    # models
+    # A dictionary of models to select from
+    models = {
+        'BertFeature': "BertFeature(512, 2, True)",
+        'BertRNN': "BertRNN(512, 2, True)",
+        'salaryRNN': "salaryRNN(tokenizer.vocab_size, 300, 512, 1, 2, True)",
+        'salaryBERT': "salaryBERT()"
+    }
+    model = eval(models[args.model])
+    if args.model != 'salaryRNN':
+        for param in model.bert.parameters():
+            param.requires_grad = False
     model.to(device)
     
     print("Start Training")
@@ -210,7 +215,17 @@ def main():
     print("Start Evaluation")
     evalute(model, test_dataset, test_loader, criterion)
 
-
-
 if __name__ == '__main__':
-    main()
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data_path", type=str, default='./data/data_cleaned_2021.csv')
+    parser.add_argument("--model", type=str, help='BertFeature, BertRNN, salaryRNN, salaryBERT', required=True)
+    parser.add_argument("--batch_size", type=int, default=10)
+    parser.add_argument("--epochs", type=int, default=100)
+    parser.add_argument("--lr", type=float, default=2e-5, help='learning rate')
+    parser.add_argument("--seed", type=int, default=413, help='random seed')
+    
+    arguments = parser.parse_args()
+    random.seed(arguments.seed)
+    torch.manual_seed(arguments.seed)
+    main(arguments)
