@@ -83,6 +83,8 @@ def train(model, train_data, train_loader, criterion, epochs, plot_every=50, plo
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     iters, train_loss, train_acc = [], [], []
     iter_count = 0
+    divergence_count = 0
+    prev_loss = torch.inf
     try:
         for epoch in range(epochs):
             total_loss = 0
@@ -115,7 +117,20 @@ def train(model, train_data, train_loader, criterion, epochs, plot_every=50, plo
             avg_loss = total_loss / len(train_loader)
             print(f'Epoch {epoch} : Average Loss {avg_loss}')
             
-        # TODO: Set up Checkpoint and Early Stopping
+        # TODO: Set up Early Stopping
+        # if validation_loss > prev_loss:
+        #     divergence_count += 1
+        # else:
+        #     divergence_count = 0
+        #     prev_loss = validation_loss
+        # Stop training if divergence_count > 5
+        if divergence_count > 5:
+            # Save the model
+            print("Early Stopping at epoch {}".format(epoch))
+            torch.save(model.state_dict(), 'model.pth')
+            return
+        
+        # If early stopping never triggers
         torch.save(model.state_dict(), 'model.pth')
     finally:
         # TODO: Fix plotting - Fred
@@ -188,7 +203,7 @@ def main():
     #之后可以加上validation，train里面还没有写validation的部分
     
     #hyperparameters
-    epochs = 100
+    epochs = 1
     criterion = torch.nn.MSELoss().to(device)
     learning_rate = 2e-5
  
