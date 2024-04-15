@@ -104,6 +104,7 @@ def train(model, train_data, train_loader, criterion, epochs, plot_every=50, plo
                 loss.backward()
                 optimizer.step()
 
+
                 iter_count += 1
                 if iter_count % plot_every == 0:
                     iters.append(iter_count)
@@ -120,7 +121,9 @@ def train(model, train_data, train_loader, criterion, epochs, plot_every=50, plo
 
 
 def compute_loss(criterion, outputs, targets):
-    return criterion(outputs[:, 0], targets[:, 0]) + criterion(outputs[:, 1], targets[:, 1])
+    loss1 = criterion(outputs[:, 0], targets[:, 0])
+    loss2 = criterion(outputs[:, 1], targets[:, 1])
+    return loss1 + loss2
 
 
 def evalute(model, test_data, test_loader, criterion):
@@ -138,7 +141,7 @@ def evalute(model, test_data, test_loader, criterion):
                 outputs = model(input_ids, attention_mask)
                 
             loss = compute_loss(criterion, outputs, targets)
-            print(outputs, targets)
+            print(outputs)
             total_loss += loss.item()
     avg_loss = total_loss / len(test_loader)
     acc = accuracy(model, test_data)
@@ -181,15 +184,17 @@ def main():
     #之后可以加上validation，train里面还没有写validation的部分
     
     #hyperparameters
-    epochs = 5
+    epochs = 12
     criterion = torch.nn.MSELoss().to(device)
-    learning_rate = 2e-5
+    learning_rate = 2e-4
  
     # models 
-    # model = salaryRNN(512, 2, True)
+    # model = salaryRNN(512, 2, True)       # Same output for all inputs
     # model = BertRNN(512, 2, True)
-    model = BertFeature(512, 2, True)
-    # model = salaryBERT()
+    # model = BertFeature(512, 2, True)
+    model = salaryBERT()
+    for param in model.bert.parameters():
+        param.requires_grad = False
     model.to(device)
     
     print("Start Training")
@@ -199,7 +204,7 @@ def main():
     # Evalute Loop 
     # TODO
     print("Start Evaluation")
-    evalute(model, test_dataset, test_loader, criterion)
+    evalute(model, train_dataset, train_loader, criterion)
 
 
 
