@@ -135,7 +135,8 @@ def evalute(model, test_loader, criterion):
             print(outputs, targets)
             total_loss += loss.item()
     avg_loss = total_loss / len(test_loader)
-    print(f'Average Loss on Test Set: {avg_loss}')
+    acc = accuracy(model, test_loader)
+    print(f'Average Loss on Test Set: {avg_loss}, Average Accuracy: {acc}')
 
 def tokenize_data(data, tokenizer, device):
     encodings = tokenizer(data['string'], padding='max_length', truncation=True, return_tensors='pt').to(device)

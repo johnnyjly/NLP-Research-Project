@@ -1,8 +1,6 @@
-import torch, os, bert
-import pandas as pd
-import numpy as np
+import torch
 import torch.nn as nn
-from transformers import BertTokenizer, BertModel
+from transformers import BertModel
 
 class BertFeature(nn.Module):
     def __init__(self, rnn_hidden_size, num_layers,bidirectional):

@@ -2,12 +2,8 @@
 #   Bert Fine Tune Model    #
 # ========================= #
 # Use Bert and an extra layer to perform fine tune
-
-import torch, os, bert
-import pandas as pd
-import numpy as np
 import torch.nn as nn
-from transformers import BertTokenizer, BertModel
+from transformers import BertModel
 
 class salaryBERT(nn.Module):
     def __init__(self):

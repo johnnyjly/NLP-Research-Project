@@ -4,10 +4,6 @@
 # Use feature based bert or word2Vec to perform naive RNN
 # In theory, they can share a same model class.
 
-import torch
-import os, bert
-import pandas as pd
-import numpy as np
 import torch.nn as nn
 
 class salaryRNN(nn.Module):
