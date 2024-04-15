@@ -86,7 +86,6 @@ def train(model, train_data, train_loader, criterion, epochs, plot_every=50, plo
     try:
         for epoch in range(epochs):
             total_loss = 0
-            print(f"Epoch {epoch}")
             for batch in tqdm(train_loader):
                 # Debugging
                 input_ids = batch['input_ids'].squeeze(1)
@@ -123,8 +122,7 @@ def train(model, train_data, train_loader, criterion, epochs, plot_every=50, plo
 def compute_loss(criterion, outputs, targets):
     loss1 = criterion(outputs[:, 0], targets[:, 0])
     loss2 = criterion(outputs[:, 1], targets[:, 1])
-    return loss1 + loss2
-
+    return (loss1 + loss2) / 2
 
 def evalute(model, test_data, test_loader, criterion):
     model.eval()
@@ -141,7 +139,7 @@ def evalute(model, test_data, test_loader, criterion):
                 outputs = model(input_ids, attention_mask)
                 
             loss = compute_loss(criterion, outputs, targets)
-            print(outputs)
+            print(outputs, targets)
             total_loss += loss.item()
     avg_loss = total_loss / len(test_loader)
     acc = accuracy(model, test_data)
@@ -179,20 +177,20 @@ def main():
     # train_dataset.reset_index(drop=True, inplace=True)
     # test_dataset.reset_index(drop=True, inplace=True)
     
-    train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=10, shuffle=False)
     #之后可以加上validation，train里面还没有写validation的部分
     
     #hyperparameters
-    epochs = 12
+    epochs = 100
     criterion = torch.nn.MSELoss().to(device)
-    learning_rate = 2e-4
+    learning_rate = 2e-5
  
     # models 
     # model = salaryRNN(512, 2, True)       # Same output for all inputs
     # model = BertRNN(512, 2, True)
-    # model = BertFeature(512, 2, True)
-    model = salaryBERT()
+    model = BertFeature(512, 2, True)
+    # model = salaryBERT()
     for param in model.bert.parameters():
         param.requires_grad = False
     model.to(device)
@@ -204,7 +202,7 @@ def main():
     # Evalute Loop 
     # TODO
     print("Start Evaluation")
-    evalute(model, train_dataset, train_loader, criterion)
+    evalute(model, test_dataset, test_loader, criterion)
 
 
 
