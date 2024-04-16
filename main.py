@@ -61,7 +61,11 @@ def accuracy(model, dataset, n_max=1000):
 
 
 def plot_loss(iters, train_loss, train_acc, val_loss, val_acc):
-    # TODO: Plot loss and accuracy respect to epoch here
+    iters = [item.cpu() for item in iters]
+    train_loss = [item.cpu() for item in train_loss]
+    train_acc = [item.cpu() for item in train_acc]
+    val_loss = [item.cpu() for item in val_loss]
+    val_acc = [item.cpu() for item in val_acc]
     plt.figure()
     plt.plot(iters[:len(train_loss)], train_loss)
     plt.plot(iters[:len(val_loss)], val_loss)
@@ -227,7 +231,6 @@ def main(args: argparse.Namespace):
     print("Start Training")
     # Training Loop & plot
     iters, train_loss, train_acc, val_loss, val_acc = train(model, train_dataset, train_loader, criterion, epochs, learning_rate)
-    # TODO: Fix plotting - Fred
     plot_loss(iters, train_loss, train_acc, val_loss, val_acc)
 
     # Evaluate Loop
