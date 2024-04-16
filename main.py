@@ -17,6 +17,7 @@ from model_bert_rnn import BertRNN
 from model_RNN import salaryRNN
 from model_bert import salaryBERT
 
+
 def accuracy(model, dataset, n_max=1000):
     """
     Estimate the accuracy of `model` over the `dataset`.
@@ -37,13 +38,13 @@ def accuracy(model, dataset, n_max=1000):
     acc = []
     for i, d in enumerate(dataloader):
         x, t = d['input_ids'].squeeze(1), d['targets'].squeeze(0)
-        
+
         if model.__class__.__name__ == 'salaryRNN':
             y = model(x)
         else:
             attention_mask = d['attention_mask'].squeeze(1)
             y = model(x, attention_mask)
-            
+
         y = y.squeeze(0)
         lower = max(y[0], t[0])
         upper = min(y[1], t[1])
@@ -56,13 +57,14 @@ def accuracy(model, dataset, n_max=1000):
 
         if i >= n_max:
             break
-    return sum(acc)/min(n_max, i)
+    return sum(acc) / min(n_max, i)
 
 
-def plot_loss(iters, train_loss, train_acc):
+def plot_loss(iters, train_loss, train_acc, val_loss, val_acc):
     # TODO: Plot loss and accuracy respect to epoch here
     plt.figure()
     plt.plot(iters[:len(train_loss)], train_loss)
+    plt.plot(iters[:len(val_loss)], val_loss)
     plt.title("Loss over iterations")
     plt.xlabel("Iterations")
     plt.ylabel("Loss")
@@ -71,6 +73,7 @@ def plot_loss(iters, train_loss, train_acc):
     plt.clf()
     plt.figure()
     plt.plot(iters[:len(train_acc)], train_acc)
+    plt.plot(iters[:len(val_acc)], val_acc)
     plt.title("Accuracy over iterations")
     plt.xlabel("Iterations")
     plt.ylabel("Accuracy")
@@ -80,60 +83,60 @@ def plot_loss(iters, train_loss, train_acc):
 def train(model, train_data, train_loader, criterion, epochs, plot_every=50, plot=True, learning_rate=0.0001):
     model.train()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    iters, train_loss, train_acc = [], [], []
+    iters, train_loss, train_acc, val_loss, val_acc = [], [], [], [], []
     iter_count = 0
     divergence_count = 0
     prev_loss = torch.inf
-    try:
-        for epoch in range(epochs):
-            total_loss = 0
-            for batch in tqdm(train_loader):
-                # Debugging
-                input_ids = batch['input_ids'].squeeze(1)
-                targets = batch['targets']
-                
-                if model.__class__.__name__ == 'salaryRNN':
-                    outputs = model(input_ids)  
-                else:
-                    attention_mask = batch['attention_mask'].squeeze(1)
-                    outputs = model(input_ids, attention_mask)
-                    
-                optimizer.zero_grad()
-                loss = compute_loss(criterion, outputs, targets)
-                total_loss += loss.item()
-                loss.backward()
-                optimizer.step()
 
-                # TODO: Validation Set Accuracy and Loss - Kurt
-                iter_count += 1
-                if iter_count % plot_every == 0:
-                    iters.append(iter_count)
-                    ta = accuracy(model, train_data)
-                    train_loss.append(float(loss))
-                    train_acc.append(ta)
-                    print(iter_count, "Loss:", float(loss), "Train Acc:", ta)
+    for epoch in range(epochs):
+        total_loss = 0
+        for batch in tqdm(train_loader):
+            # Debugging
+            input_ids = batch['input_ids'].squeeze(1)
+            targets = batch['targets']
 
-            avg_loss = total_loss / len(train_loader)
-            print(f'Epoch {epoch} : Average Loss {avg_loss}')
-            
-        # TODO: Set up Early Stopping
-        # if validation_loss > prev_loss:
-        #     divergence_count += 1
-        # else:
-        #     divergence_count = 0
-        #     prev_loss = validation_loss
-        # Stop training if divergence_count > 5
-        if divergence_count > 5:
-            # Save the model
-            print("Early Stopping at epoch {}".format(epoch))
-            torch.save(model.state_dict(), 'model.pth')
-            return
-        
-        # If early stopping never triggers
+            if model.__class__.__name__ == 'salaryRNN':
+                outputs = model(input_ids)
+            else:
+                attention_mask = batch['attention_mask'].squeeze(1)
+                outputs = model(input_ids, attention_mask)
+
+            optimizer.zero_grad()
+            loss = compute_loss(criterion, outputs, targets)
+            total_loss += loss.item()
+            loss.backward()
+            optimizer.step()
+
+            # TODO: Validation Set Accuracy and Loss - Kurt
+            iter_count += 1
+            if iter_count % plot_every == 0:
+                iters.append(iter_count)
+                ta = accuracy(model, train_data)
+                train_loss.append(float(loss))
+                train_acc.append(ta)
+                print(iter_count, "Loss:", float(loss), "Train Acc:", ta)
+
+        avg_loss = total_loss / len(train_loader)
+        print(f'Epoch {epoch} : Average Loss {avg_loss}')
+
+    # TODO: Set up Early Stopping
+    # if validation_loss > prev_loss:
+    #     divergence_count += 1
+    # else:
+    #     divergence_count = 0
+    #     prev_loss = validation_loss
+    # Stop training if divergence_count > 5
+    if divergence_count > 5:
+        # Save the model
+        print("Early Stopping at epoch {}".format(epoch))
         torch.save(model.state_dict(), 'model.pth')
-    finally:
-        # TODO: Fix plotting - Fred
-        plot_loss(iters, train_loss, train_acc)
+        return
+
+    # If early stopping never triggers
+    torch.save(model.state_dict(), 'model.pth')
+
+    # TODO: Fix plotting - Fred
+    plot_loss(iters, train_loss, train_acc, val_loss, val_acc)
 
 
 def compute_loss(criterion, outputs, targets):
@@ -141,20 +144,21 @@ def compute_loss(criterion, outputs, targets):
     loss2 = criterion(outputs[:, 1], targets[:, 1])
     return (loss1 + loss2) / 2
 
-def evalute(model, test_data, test_loader, criterion):
+
+def evaluate(model, test_data, test_loader, criterion):
     model.eval()
     total_loss = 0
     with torch.no_grad():
         for batch in test_loader:
             input_ids = batch['input_ids'].squeeze(1)
             targets = batch['targets']
-            
+
             if model.__class__.__name__ == 'salaryRNN':
                 outputs = model(input_ids)
             else:
                 attention_mask = batch['attention_mask'].squeeze(1)
                 outputs = model(input_ids, attention_mask)
-                
+
             loss = compute_loss(criterion, outputs, targets)
             print(outputs, targets)
             total_loss += loss.item()
@@ -162,22 +166,23 @@ def evalute(model, test_data, test_loader, criterion):
     acc = accuracy(model, test_data)
     print(f'Average Loss on Test Set: {avg_loss}, Average Accuracy: {acc}')
 
+
 def tokenize_data(data, tokenizer, device):
     encodings = tokenizer(data['string'], padding='max_length', truncation=True, return_tensors='pt').to(device)
     encodings['targets'] = torch.FloatTensor([data['target_l'], data['target_u']]).to(device)
     return encodings
-    
+
     # return tokenizer(data['string'].tolist(), padding='max_length', truncation=True, return_tensors='pt', return_labels=True)
-        
+
+
 def main(args: argparse.Namespace):
-    
     # TODO: Argparse -Johnny
-    
+
     # Disable parallelism to avoid deadlocks
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print("Current Device: {}".format(device))
-    
+
     # Get preprocessed data
     data_path = args.data_path
     data = preprocess_data(data_path)
@@ -192,21 +197,21 @@ def main(args: argparse.Namespace):
     tokenize_dataset = tokenize_dataset.tolist()
 
     train_dataset, test_dataset = train_test_split(tokenize_dataset, test_size=0.2)
-    
+
     # Reset indices after split
     # train_dataset.reset_index(drop=True, inplace=True)
     # test_dataset.reset_index(drop=True, inplace=True)
-    
+
     batch_size = args.batch_size
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-    #之后可以加上validation，train里面还没有写validation的部分
-    
-    #hyperparameters
+    # 之后可以加上validation，train里面还没有写validation的部分
+
+    # hyperparameters
     epochs = args.epochs
     criterion = torch.nn.MSELoss().to(device)
     learning_rate = args.lr
-    
+
     # models
     # A dictionary of models to select from
     models = {
@@ -220,18 +225,18 @@ def main(args: argparse.Namespace):
         for param in model.bert.parameters():
             param.requires_grad = False
     model.to(device)
-    
+
     print("Start Training")
     # Training Loop & plot
     train(model, train_dataset, train_loader, criterion, epochs, learning_rate)
 
-    # Evalute Loop 
+    # Evaluate Loop
     # TODO
     print("Start Evaluation")
-    evalute(model, test_dataset, test_loader, criterion)
+    evaluate(model, test_dataset, test_loader, criterion)
+
 
 if __name__ == '__main__':
-    
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_path", type=str, default='./data/data_cleaned_2021.csv')
     parser.add_argument("--model", type=str, help='BertFeature, BertRNN, salaryRNN, salaryBERT', required=True)
@@ -239,7 +244,7 @@ if __name__ == '__main__':
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--lr", type=float, default=2e-5, help='learning rate')
     parser.add_argument("--seed", type=int, default=413, help='random seed')
-    
+
     arguments = parser.parse_args()
     random.seed(arguments.seed)
     torch.manual_seed(arguments.seed)
