@@ -134,9 +134,7 @@ def train(model, train_data, train_loader, criterion, epochs, plot_every=50, plo
 
     # If early stopping never triggers
     torch.save(model.state_dict(), 'model.pth')
-
-    # TODO: Fix plotting - Fred
-    plot_loss(iters, train_loss, train_acc, val_loss, val_acc)
+    return iters, train_loss, train_acc, val_loss, val_acc
 
 
 def compute_loss(criterion, outputs, targets):
@@ -228,7 +226,9 @@ def main(args: argparse.Namespace):
 
     print("Start Training")
     # Training Loop & plot
-    train(model, train_dataset, train_loader, criterion, epochs, learning_rate)
+    iters, train_loss, train_acc, val_loss, val_acc = train(model, train_dataset, train_loader, criterion, epochs, learning_rate)
+    # TODO: Fix plotting - Fred
+    plot_loss(iters, train_loss, train_acc, val_loss, val_acc)
 
     # Evaluate Loop
     # TODO
