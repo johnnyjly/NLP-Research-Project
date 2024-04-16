@@ -84,15 +84,17 @@ def plot_loss(iters, train_loss, train_acc, val_loss, val_acc):
     plt.savefig("accuracy.png")
 
 
-def train(model, train_data, train_loader, criterion, epochs, plot_every=50, plot=True, learning_rate=0.0001):
+def train(model, train_data, train_loader, val_data, val_loader, criterion, epochs, plot_every=50, plot=True, learning_rate=0.0001, patience=5):
     model.train()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     iters, train_loss, train_acc, val_loss, val_acc = [], [], [], [], []
     iter_count = 0
     divergence_count = 0
-    prev_loss = torch.inf
+    best_val_loss = float('inf')
+    best_model = None
 
     for epoch in range(epochs):
+        model.train()
         total_loss = 0
         for batch in tqdm(train_loader):
             # Debugging
@@ -111,7 +113,6 @@ def train(model, train_data, train_loader, criterion, epochs, plot_every=50, plo
             loss.backward()
             optimizer.step()
 
-            # TODO: Validation Set Accuracy and Loss - Kurt
             iter_count += 1
             if iter_count % plot_every == 0:
                 iters.append(iter_count)
@@ -119,24 +120,39 @@ def train(model, train_data, train_loader, criterion, epochs, plot_every=50, plo
                 train_loss.append(float(loss))
                 train_acc.append(ta)
                 print(iter_count, "Loss:", float(loss), "Train Acc:", ta)
+                
+        model.eval()
+        total_val_loss = 0
+        with torch.no_grad():
+            for batch in val_loader:
+                input_ids = batch['input_ids'].squeeze(1)
+                targets = batch['targets']
 
-        avg_loss = total_loss / len(train_loader)
-        print(f'Epoch {epoch} : Average Loss {avg_loss}')
+                if model.__class__.__name__ == 'salaryRNN':
+                    outputs = model(input_ids)
+                else:
+                    attention_mask = batch['attention_mask'].squeeze(1)
+                    outputs = model(input_ids, attention_mask)
 
-    # TODO: Set up Early Stopping
-    # if validation_loss > prev_loss:
-    #     divergence_count += 1
-    # else:
-    #     divergence_count = 0
-    #     prev_loss = validation_loss
-    # Stop training if divergence_count > 5
-    if divergence_count > 5:
-        # Save the model
-        print("Early Stopping at epoch {}".format(epoch))
-        torch.save(model.state_dict(), 'model.pth')
-        return
+                loss = compute_loss(criterion, outputs, targets)
+                total_val_loss += loss.item()
 
-    # If early stopping never triggers
+        avg_loss = total_loss / len(val_loader)
+        val_acc = accuracy(model, val_data)
+        print(f'End of Epoch {epoch}, Validation Loss: {avg_loss}, Validation Accuracy: {val_acc}')
+        
+        
+        if avg_loss < best_val_loss:
+            best_val_loss = avg_loss
+            no_improvement = 0
+            best_model = model.state_dict()
+        else:
+            no_improvement += 1
+            if no_improvement > patience:
+                print(f"Early stopping at epoch {epoch} with best validation loss {best_val_loss}")
+                model.load_state_dict(best_model)
+                break
+            
     torch.save(model.state_dict(), 'model.pth')
     return iters, train_loss, train_acc, val_loss, val_acc
 
@@ -199,6 +215,7 @@ def main(args: argparse.Namespace):
     tokenize_dataset = tokenize_dataset.tolist()
 
     train_dataset, test_dataset = train_test_split(tokenize_dataset, test_size=0.2)
+    train_dataset, val_dataset = train_test_split(train_dataset, test_size=0.2)
 
     # Reset indices after split
     # train_dataset.reset_index(drop=True, inplace=True)
@@ -207,6 +224,7 @@ def main(args: argparse.Namespace):
     batch_size = args.batch_size
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     # 之后可以加上validation，train里面还没有写validation的部分
 
     # hyperparameters
@@ -230,7 +248,8 @@ def main(args: argparse.Namespace):
 
     print("Start Training")
     # Training Loop & plot
-    iters, train_loss, train_acc, val_loss, val_acc = train(model, train_dataset, train_loader, criterion, epochs, learning_rate)
+    iters, train_loss, train_acc, val_loss, val_acc = train(model, train_dataset, train_loader,val_dataset, val_loader, criterion,
+                                                            epochs, learning_rate=learning_rate)
     plot_loss(iters, train_loss, train_acc, val_loss, val_acc)
 
     # Evaluate Loop
