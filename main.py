@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from torch.utils.data import DataLoader
-from torch.utils.data.dataloader import default_collate
 from sklearn.model_selection import train_test_split
 from transformers import AutoTokenizer
 
@@ -163,6 +162,17 @@ def evaluate(model, test_data, test_loader, criterion, require_acc=True):
     return avg_loss, acc
 
 
+def predict(model:torch.nn.Module, job_description:str, tokenizer:AutoTokenizer, device:torch.device):
+    model.eval()
+    encodings = tokenizer(job_description, padding='max_length', truncation=True, return_tensors='pt').to(device)
+    with torch.no_grad():
+        if model.__class__.__name__ == 'salaryRNN':
+            outputs = model(encodings['input_ids'])
+        else:
+            outputs = model(encodings['input_ids'], encodings['attention_mask'])
+    return outputs.cpu()
+
+
 def tokenize_data(data, tokenizer, device):
     encodings = tokenizer(data['string'], padding='max_length', truncation=True, return_tensors='pt').to(device)
     encodings['targets'] = torch.FloatTensor([data['target_l'], data['target_u']]).to(device)
@@ -202,12 +212,12 @@ def main(args: argparse.Namespace):
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-    # 之后可以加上validation，train里面还没有写validation的部分
 
     # hyperparameters
     epochs = args.epochs
     criterion = torch.nn.MSELoss().to(device)
     learning_rate = args.lr
+    patience = args.patience
 
     # models
     # A dictionary of models to select from
@@ -217,18 +227,34 @@ def main(args: argparse.Namespace):
         'salaryRNN': "salaryRNN(tokenizer.vocab_size, 300, 512, 1, 2, True)",
         'salaryBERT': "salaryBERT()"
     }
+
     model = eval(models[args.model])
     if args.model != 'salaryRNN':
         for param in model.bert.parameters():
             param.requires_grad = False
     model.to(device)
 
-    print("Start Training")
-    # Training Loop & plot
-    train_loss, val_loss, val_acc = train(model, train_loader, val_dataset, val_loader,
-                                                     criterion,
-                                                     epochs, learning_rate=learning_rate)
-    plot_loss(train_loss, val_loss, val_acc)
+    if args.use_trained:
+        # Load model if specified
+        model.load_state_dict(torch.load(args.use_trained))
+        print(f"Model loaded from {args.use_trained}")
+        # Predict if specified
+        if args.predict:
+            job_desctiption = open(args.predict, 'r').read()
+            output = predict(model, job_desctiption, tokenizer, device)
+            output = torch.round(output, decimals=2).numpy().squeeze()
+            print(f'Predicted Salary Range: {output[0]:.0f}k to {output[1]:.0f}k USD')
+            return
+    else:
+        # If not specified model, start training
+        print("Start Training")
+        # Training Loop & plot
+        train_loss, val_loss, val_acc = train(model, train_loader, val_dataset, val_loader,
+                                                        criterion,
+                                                        epochs, 
+                                                        learning_rate=learning_rate,
+                                                        patience=patience)
+        plot_loss(train_loss, val_loss, val_acc)
 
     # Evaluate Loop
     print("Start Evaluation")
@@ -240,10 +266,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_path", type=str, default='./data/data_cleaned_2021.csv')
     parser.add_argument("--model", type=str, help='BertFeature, BertRNN, salaryRNN, salaryBERT', required=True)
+    # Hyperparameters
     parser.add_argument("--batch_size", type=int, default=10)
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--lr", type=float, default=2e-5, help='learning rate')
     parser.add_argument("--seed", type=int, default=413, help='random seed')
+    parser.add_argument("--patience", type=int, default=10, help='early stopping patience')
+    # Predict
+    parser.add_argument("--use_trained", type=str, default=None, help='path to already trained model')
+    parser.add_argument("--predict", type=str, default=None, help='path to txt containing a job description we want to predict salary range')
 
     arguments = parser.parse_args()
     random.seed(arguments.seed)
