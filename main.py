@@ -68,13 +68,13 @@ def plot_loss(iters, train_loss, val_loss, val_acc):
     plt.figure()
     plt.plot(iters[:len(train_loss)], train_loss, label='Train Loss')
     plt.plot(iters[:len(val_loss)], val_loss, label='Validation Loss')
+    # Add legend
+    plt.legend()
     plt.title("Loss over iterations")
     plt.xlabel("Iterations")
     plt.ylabel("Loss")
     plt.savefig("loss.png")
 
-    # Add legend
-    plt.legend()
 
     plt.clf()
     plt.figure()
