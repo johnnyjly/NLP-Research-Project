@@ -60,13 +60,14 @@ def accuracy(model, dataset, n_max=1000):
     return sum(acc) / min(n_max, i)
 
 
-def plot_loss(train_loss, train_acc, val_loss, val_acc):
+def plot_loss(train_loss, val_loss, val_acc):
     train_loss = torch.tensor(train_loss).cpu().numpy()
     val_loss = torch.tensor(val_loss).cpu().numpy()
     val_acc = torch.tensor(val_acc).cpu().numpy()
     plt.figure()
-    plt.plot(train_loss, label='Train Loss')
-    plt.plot(val_loss, label='Validation Loss')
+    plt.plot(train_loss, label='Train Loss', marker='o')
+    plt.xticks(range(len(train_loss)))
+    plt.plot(val_loss, label='Validation Loss', marker='o')
     # Add legend
     plt.legend()
     plt.title("Loss over iterations")
@@ -76,18 +77,19 @@ def plot_loss(train_loss, train_acc, val_loss, val_acc):
 
     plt.clf()
     plt.figure()
-    plt.plot(train_acc)
-    plt.plot(val_acc)
+    plt.plot(val_acc, label='Validation Accuracy', marker='o')
+    plt.xticks(range(len(val_acc)))
+    plt.legend()
     plt.title("Accuracy over iterations")
     plt.xlabel("Iterations")
     plt.ylabel("Accuracy")
     plt.savefig("accuracy.png")
 
 
-def train(model, train_data, train_loader, val_data, val_loader, criterion, epochs, learning_rate=0.0001, patience=5):
+def train(model, train_loader, val_data, val_loader, criterion, epochs, learning_rate=0.0001, patience=5):
     model.train()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    train_loss, train_acc, val_loss, val_acc = [], [], [], []
+    train_loss, val_loss, val_acc = [], [], []
     best_val_loss = float('inf')
     best_model = None
 
@@ -115,10 +117,10 @@ def train(model, train_data, train_loader, val_data, val_loader, criterion, epoc
         avg_loss = total_loss / len(train_loader)
         train_loss.append(float(avg_loss))
         v_loss, v_acc = evaluate(model, val_data, val_loader, criterion)
-        val_acc.append(float(v_loss))
-        val_loss.append(float(v_acc))
+        val_acc.append(float(v_acc))
+        val_loss.append(float(v_loss))
         print(
-            f'End of Epoch {epoch}, Training Loss: {avg_loss}, Validation Loss: {v_loss}, Validation Accuracy: {v_acc}')
+            f'End of Epoch {epoch}, Training Loss: {avg_loss}, Validation Loss: {v_loss}, Validation Accuracy: {v_acc*100:.4f}%')
 
         if v_loss < best_val_loss:
             best_val_loss = v_loss
@@ -132,7 +134,7 @@ def train(model, train_data, train_loader, val_data, val_loader, criterion, epoc
                 break
 
     torch.save(model.state_dict(), 'model.pth')
-    return train_loss, train_acc, val_loss, val_acc
+    return train_loss, val_loss, val_acc
 
 
 def compute_loss(criterion, outputs, targets):
@@ -226,15 +228,15 @@ def main(args: argparse.Namespace):
 
     print("Start Training")
     # Training Loop & plot
-    train_loss, train_acc, val_loss, val_acc = train(model, train_dataset, train_loader, val_dataset, val_loader,
+    train_loss, val_loss, val_acc = train(model, train_loader, val_dataset, val_loader,
                                                      criterion,
                                                      epochs, learning_rate=learning_rate)
-    plot_loss(train_loss, train_acc, val_loss, val_acc)
+    plot_loss(train_loss, val_loss, val_acc)
 
     # Evaluate Loop
     print("Start Evaluation")
     loss, acc = evaluate(model, test_dataset, test_loader, criterion)
-    print(f'Average Loss on Test Set: {loss}, Average Accuracy: {acc}')
+    print(f'Average Loss on Test Set: {loss}, Average Accuracy: {acc*100:.4f}%')
 
 
 if __name__ == '__main__':
