@@ -66,7 +66,6 @@ def plot_loss(train_loss, val_loss, val_acc):
     val_acc = torch.tensor(val_acc).cpu().numpy()
     plt.figure()
     plt.plot(train_loss, label='Train Loss', marker='o')
-    plt.xticks(range(len(train_loss)))
     plt.plot(val_loss, label='Validation Loss', marker='o')
     # Add legend
     plt.legend()
@@ -78,7 +77,6 @@ def plot_loss(train_loss, val_loss, val_acc):
     plt.clf()
     plt.figure()
     plt.plot(val_acc, label='Validation Accuracy', marker='o')
-    plt.xticks(range(len(val_acc)))
     plt.legend()
     plt.title("Accuracy over iterations")
     plt.xlabel("Iterations")
@@ -86,7 +84,7 @@ def plot_loss(train_loss, val_loss, val_acc):
     plt.savefig("accuracy.png")
 
 
-def train(model, train_loader, val_data, val_loader, criterion, epochs, learning_rate=0.0001, patience=5):
+def train(model, train_loader, val_data, val_loader, criterion, epochs, learning_rate=0.0001, patience=10):
     model.train()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     train_loss, val_loss, val_acc = [], [], []
@@ -174,7 +172,6 @@ def tokenize_data(data, tokenizer, device):
 
 
 def main(args: argparse.Namespace):
-    # TODO: Argparse -Johnny
 
     # Disable parallelism to avoid deadlocks
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
