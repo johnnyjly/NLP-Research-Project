@@ -60,15 +60,14 @@ def accuracy(model, dataset, n_max=1000):
     return sum(acc) / min(n_max, i)
 
 
-def plot_loss(iters, train_loss, train_acc, val_loss, val_acc):
-    iters = torch.tensor(iters).cpu().numpy()
+def plot_loss(train_loss, train_acc, val_loss, val_acc):
     train_loss = torch.tensor(train_loss).cpu().numpy()
     train_acc = torch.tensor(train_acc).cpu().numpy()
     val_loss = torch.tensor(val_loss).cpu().numpy()
     val_acc = torch.tensor(val_acc).cpu().numpy()
     plt.figure()
-    plt.plot(iters[:len(train_loss)], train_loss)
-    plt.plot(iters[:len(val_loss)], val_loss)
+    plt.plot(train_loss)
+    plt.plot(val_loss)
     plt.title("Loss over iterations")
     plt.xlabel("Iterations")
     plt.ylabel("Loss")
@@ -76,8 +75,8 @@ def plot_loss(iters, train_loss, train_acc, val_loss, val_acc):
 
     plt.clf()
     plt.figure()
-    plt.plot(iters[:len(train_acc)], train_acc)
-    plt.plot(iters[:len(val_acc)], val_acc)
+    plt.plot(train_acc)
+    plt.plot(val_acc)
     plt.title("Accuracy over iterations")
     plt.xlabel("Iterations")
     plt.ylabel("Accuracy")
@@ -87,9 +86,7 @@ def plot_loss(iters, train_loss, train_acc, val_loss, val_acc):
 def train(model, train_data, train_loader, val_data, val_loader, criterion, epochs, plot_every=50, plot=True, learning_rate=0.0001, patience=5):
     model.train()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    iters, train_loss, train_acc, val_loss, val_acc = [], [], [], [], []
-    iter_count = 0
-    divergence_count = 0
+    train_loss, train_acc, val_loss, val_acc = [], [], [], []
     best_val_loss = float('inf')
     best_model = None
 
@@ -113,33 +110,11 @@ def train(model, train_data, train_loader, val_data, val_loader, criterion, epoc
             loss.backward()
             optimizer.step()
 
-            iter_count += 1
 
-        iters.append(iter_count)
-        ta = accuracy(model, train_data)
-        train_loss.append(float(loss))
-        train_acc.append(ta)
-        print(iter_count, "Loss:", float(loss), "Train Acc:", ta)
-
-        model.eval()
-        total_val_loss = 0
-        with torch.no_grad():
-            for batch in val_loader:
-                input_ids = batch['input_ids'].squeeze(1)
-                targets = batch['targets']
-
-                if model.__class__.__name__ == 'salaryRNN':
-                    outputs = model(input_ids)
-                else:
-                    attention_mask = batch['attention_mask'].squeeze(1)
-                    outputs = model(input_ids, attention_mask)
-
-                loss = compute_loss(criterion, outputs, targets)
-                total_val_loss += loss.item()
-
-        avg_loss = total_loss / len(val_loader)
-        val_acc = accuracy(model, val_data)
-        print(f'End of Epoch {epoch}, Validation Loss: {avg_loss}, Validation Accuracy: {val_acc}')
+        val_loss, val_acc = evaluate(model, val_data, val_loader, criterion)
+        avg_loss = total_loss / len(train_loader)
+        train_loss.append(float(avg_loss))
+        print(f'End of Epoch {epoch}, Training Loss: {avg_loss}, Validation Loss: {val_loss}, Validation Accuracy: {val_acc}')
         
         
         if avg_loss < best_val_loss:
@@ -154,7 +129,7 @@ def train(model, train_data, train_loader, val_data, val_loader, criterion, epoc
                 break
             
     torch.save(model.state_dict(), 'model.pth')
-    return iters, train_loss, train_acc, val_loss, val_acc
+    return train_loss, train_acc, val_loss, val_acc
 
 
 def compute_loss(criterion, outputs, targets):
@@ -163,7 +138,7 @@ def compute_loss(criterion, outputs, targets):
     return (loss1 + loss2) / 2
 
 
-def evaluate(model, test_data, test_loader, criterion):
+def evaluate(model, test_data, test_loader, criterion, require_acc=True):
     model.eval()
     total_loss = 0
     with torch.no_grad():
@@ -178,11 +153,11 @@ def evaluate(model, test_data, test_loader, criterion):
                 outputs = model(input_ids, attention_mask)
 
             loss = compute_loss(criterion, outputs, targets)
-            print(outputs, targets)
             total_loss += loss.item()
     avg_loss = total_loss / len(test_loader)
-    acc = accuracy(model, test_data)
-    print(f'Average Loss on Test Set: {avg_loss}, Average Accuracy: {acc}')
+    if require_acc:
+        acc = accuracy(model, test_data)
+    return avg_loss, acc
 
 
 def tokenize_data(data, tokenizer, device):
@@ -248,14 +223,14 @@ def main(args: argparse.Namespace):
 
     print("Start Training")
     # Training Loop & plot
-    iters, train_loss, train_acc, val_loss, val_acc = train(model, train_dataset, train_loader,val_dataset, val_loader, criterion,
+    train_loss, train_acc, val_loss, val_acc = train(model, train_dataset, train_loader,val_dataset, val_loader, criterion,
                                                             epochs, learning_rate=learning_rate)
-    plot_loss(iters, train_loss, train_acc, val_loss, val_acc)
+    plot_loss(train_loss, train_acc, val_loss, val_acc)
 
     # Evaluate Loop
-    # TODO
     print("Start Evaluation")
-    evaluate(model, test_dataset, test_loader, criterion)
+    loss, acc = evaluate(model, test_dataset, test_loader, criterion)
+    print(f'Average Loss on Test Set: {loss}, Average Accuracy: {acc}')
 
 
 if __name__ == '__main__':
