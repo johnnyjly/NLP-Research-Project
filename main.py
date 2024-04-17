@@ -84,7 +84,7 @@ def plot_loss(iters, train_loss, train_acc, val_loss, val_acc):
     plt.savefig("accuracy.png")
 
 
-def train(model, train_data, train_loader, val_data, val_loader, criterion, epochs, plot_every=50, plot=True, learning_rate=0.0001, patience=5):
+def train(model, train_data, train_loader, val_data, val_loader, criterion, epochs, learning_rate=0.0001, patience=5):
     model.train()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     iters, train_loss, train_acc, val_loss, val_acc = [], [], [], [], []
@@ -116,10 +116,8 @@ def train(model, train_data, train_loader, val_data, val_loader, criterion, epoc
             iter_count += 1
 
         iters.append(iter_count)
-        ta = accuracy(model, train_data)
         train_loss.append(float(loss))
-        train_acc.append(ta)
-        print(iter_count, "Loss:", float(loss), "Train Acc:", ta)
+        print(iter_count, "Train Loss:", float(loss))
 
         model.eval()
         total_val_loss = 0
@@ -214,8 +212,8 @@ def main(args: argparse.Namespace):
 
     tokenize_dataset = tokenize_dataset.tolist()
 
-    train_dataset, test_dataset = train_test_split(tokenize_dataset, test_size=0.2)
-    train_dataset, val_dataset = train_test_split(train_dataset, test_size=0.2)
+    train_dataset, test_dataset = train_test_split(tokenize_dataset, test_size=0.4)
+    test_dataset, val_dataset = train_test_split(test_dataset, test_size=0.5)
 
     # Reset indices after split
     # train_dataset.reset_index(drop=True, inplace=True)
