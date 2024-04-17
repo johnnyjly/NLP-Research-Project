@@ -61,11 +61,11 @@ def accuracy(model, dataset, n_max=1000):
 
 
 def plot_loss(iters, train_loss, train_acc, val_loss, val_acc):
-    iters = [item.cpu() for item in iters]
-    train_loss = [item.cpu() for item in train_loss]
-    train_acc = [item.cpu() for item in train_acc]
-    val_loss = [item.cpu() for item in val_loss]
-    val_acc = [item.cpu() for item in val_acc]
+    iters = torch.tensor(iters).cpu().numpy()
+    train_loss = torch.tensor(train_loss).cpu().numpy()
+    train_acc = torch.tensor(train_acc).cpu().numpy()
+    val_loss = torch.tensor(val_loss).cpu().numpy()
+    val_acc = torch.tensor(val_acc).cpu().numpy()
     plt.figure()
     plt.plot(iters[:len(train_loss)], train_loss)
     plt.plot(iters[:len(val_loss)], val_loss)
@@ -114,13 +114,13 @@ def train(model, train_data, train_loader, val_data, val_loader, criterion, epoc
             optimizer.step()
 
             iter_count += 1
-            if iter_count % plot_every == 0:
-                iters.append(iter_count)
-                ta = accuracy(model, train_data)
-                train_loss.append(float(loss))
-                train_acc.append(ta)
-                print(iter_count, "Loss:", float(loss), "Train Acc:", ta)
-                
+
+        iters.append(iter_count)
+        ta = accuracy(model, train_data)
+        train_loss.append(float(loss))
+        train_acc.append(ta)
+        print(iter_count, "Loss:", float(loss), "Train Acc:", ta)
+
         model.eval()
         total_val_loss = 0
         with torch.no_grad():
