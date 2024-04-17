@@ -65,8 +65,8 @@ def plot_loss(train_loss, val_loss, val_acc):
     val_loss = torch.tensor(val_loss).cpu().numpy()
     val_acc = torch.tensor(val_acc).cpu().numpy()
     plt.figure()
-    plt.plot(train_loss, label='Train Loss', marker='o')
-    plt.plot(val_loss, label='Validation Loss', marker='o')
+    plt.plot(train_loss, label='Train Loss')
+    plt.plot(val_loss, label='Validation Loss')
     # Add legend
     plt.legend()
     plt.title("Loss over iterations")
@@ -76,7 +76,7 @@ def plot_loss(train_loss, val_loss, val_acc):
 
     plt.clf()
     plt.figure()
-    plt.plot(val_acc, label='Validation Accuracy', marker='o')
+    plt.plot(val_acc, label='Validation Accuracy')
     plt.legend()
     plt.title("Accuracy over iterations")
     plt.xlabel("Iterations")
