@@ -60,23 +60,24 @@ def accuracy(model, dataset, n_max=1000):
     return sum(acc) / min(n_max, i)
 
 
-def plot_loss(iters, train_loss, train_acc, val_loss, val_acc):
+def plot_loss(iters, train_loss, val_loss, val_acc):
     iters = torch.tensor(iters).cpu().numpy()
     train_loss = torch.tensor(train_loss).cpu().numpy()
-    train_acc = torch.tensor(train_acc).cpu().numpy()
     val_loss = torch.tensor(val_loss).cpu().numpy()
     val_acc = torch.tensor(val_acc).cpu().numpy()
     plt.figure()
-    plt.plot(iters[:len(train_loss)], train_loss)
-    plt.plot(iters[:len(val_loss)], val_loss)
+    plt.plot(iters[:len(train_loss)], train_loss, label='Train Loss')
+    plt.plot(iters[:len(val_loss)], val_loss, label='Validation Loss')
     plt.title("Loss over iterations")
     plt.xlabel("Iterations")
     plt.ylabel("Loss")
     plt.savefig("loss.png")
 
+    # Add legend
+    plt.legend()
+
     plt.clf()
     plt.figure()
-    plt.plot(iters[:len(train_acc)], train_acc)
     plt.plot(iters[:len(val_acc)], val_acc)
     plt.title("Accuracy over iterations")
     plt.xlabel("Iterations")
@@ -116,8 +117,9 @@ def train(model, train_data, train_loader, val_data, val_loader, criterion, epoc
             iter_count += 1
 
         iters.append(iter_count)
-        train_loss.append(float(loss))
-        print(iter_count, "Train Loss:", float(loss))
+        avg_loss = total_loss / len(train_loader)
+        train_loss.append(float(avg_loss))
+        print(iter_count, "Train Loss:", float(avg_loss))
 
         model.eval()
         total_val_loss = 0
@@ -135,7 +137,7 @@ def train(model, train_data, train_loader, val_data, val_loader, criterion, epoc
                 loss = compute_loss(criterion, outputs, targets)
                 total_val_loss += loss.item()
 
-        avg_loss = total_loss / len(val_loader)
+        avg_loss = total_val_loss / len(val_loader)
         val_acc = accuracy(model, val_data)
         print(f'End of Epoch {epoch}, Validation Loss: {avg_loss}, Validation Accuracy: {val_acc}')
         
@@ -152,7 +154,7 @@ def train(model, train_data, train_loader, val_data, val_loader, criterion, epoc
                 break
             
     torch.save(model.state_dict(), 'model.pth')
-    return iters, train_loss, train_acc, val_loss, val_acc
+    return iters, train_loss, val_loss, val_acc
 
 
 def compute_loss(criterion, outputs, targets):
@@ -246,7 +248,7 @@ def main(args: argparse.Namespace):
 
     print("Start Training")
     # Training Loop & plot
-    iters, train_loss, train_acc, val_loss, val_acc = train(model, train_dataset, train_loader,val_dataset, val_loader, criterion,
+    iters, train_loss, val_loss, val_acc = train(model, train_dataset, train_loader,val_dataset, val_loader, criterion,
                                                             epochs, learning_rate=learning_rate)
     plot_loss(iters, train_loss, train_acc, val_loss, val_acc)
 
