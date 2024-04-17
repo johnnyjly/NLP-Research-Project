@@ -74,7 +74,6 @@ def plot_loss(train_loss, train_acc, val_loss, val_acc):
     plt.ylabel("Loss")
     plt.savefig("loss.png")
 
-
     plt.clf()
     plt.figure()
     plt.plot(train_acc)
@@ -112,15 +111,17 @@ def train(model, train_data, train_loader, val_data, val_loader, criterion, epoc
             loss.backward()
             optimizer.step()
 
-
-        val_loss, val_acc = evaluate(model, val_data, val_loader, criterion)
+        # t_loss, t_acc = evaluate(model, train_data, train_loader, criterion)
         avg_loss = total_loss / len(train_loader)
         train_loss.append(float(avg_loss))
-        print(f'End of Epoch {epoch}, Training Loss: {avg_loss}, Validation Loss: {val_loss}, Validation Accuracy: {val_acc}')
-        
-        
-        if avg_loss < best_val_loss:
-            best_val_loss = avg_loss
+        v_loss, v_acc = evaluate(model, val_data, val_loader, criterion)
+        val_acc.append(float(v_loss))
+        val_loss.append(float(v_acc))
+        print(
+            f'End of Epoch {epoch}, Training Loss: {avg_loss}, Validation Loss: {v_loss}, Validation Accuracy: {v_acc}')
+
+        if v_loss < best_val_loss:
+            best_val_loss = v_loss
             no_improvement = 0
             best_model = model.state_dict()
         else:
@@ -129,7 +130,7 @@ def train(model, train_data, train_loader, val_data, val_loader, criterion, epoc
                 print(f"Early stopping at epoch {epoch} with best validation loss {best_val_loss}")
                 model.load_state_dict(best_model)
                 break
-            
+
     torch.save(model.state_dict(), 'model.pth')
     return train_loss, train_acc, val_loss, val_acc
 
@@ -225,8 +226,9 @@ def main(args: argparse.Namespace):
 
     print("Start Training")
     # Training Loop & plot
-    train_loss, train_acc, val_loss, val_acc = train(model, train_dataset, train_loader,val_dataset, val_loader, criterion,
-                                                            epochs, learning_rate=learning_rate)
+    train_loss, train_acc, val_loss, val_acc = train(model, train_dataset, train_loader, val_dataset, val_loader,
+                                                     criterion,
+                                                     epochs, learning_rate=learning_rate)
     plot_loss(train_loss, train_acc, val_loss, val_acc)
 
     # Evaluate Loop
