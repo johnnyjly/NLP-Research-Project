@@ -76,9 +76,7 @@ in `.pth` files. We have included the trained params of a BertRNN model `BertRNN
 - Use Bert Pre-trained model
 - No decoder, directly output two logits representing upper and lower bound
 
-### Compare With Naive RNN
+### Compare With Naive RNN and GDBT (Gradient-Boosted Decision Trees)
 
-- Hand code RNN, 2 version encoding
-  - Word2Vec version
-  - BERT feature version
+- Both encoded with pre-trained BERT model
 - Compare output of same test inputs
