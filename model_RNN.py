@@ -4,6 +4,7 @@
 # Use feature based bert or word2Vec to perform naive RNN
 # In theory, they can share a same model class.
 
+import torch
 import torch.nn as nn
 
 class salaryRNN(nn.Module):
@@ -18,5 +19,6 @@ class salaryRNN(nn.Module):
     def forward(self, x):
         embedded = self.emb(x)
         output, _ = self.rnn(embedded)
-        output = self.fc(output[:, -1, :])
+        max_output, _ = torch.max(output, dim=1)
+        output = self.fc(max_output)
         return output
