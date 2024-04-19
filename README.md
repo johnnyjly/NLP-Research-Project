@@ -51,11 +51,9 @@ pip3 install -r requirements.txt
 - Use Bert Pre-trained model
 - No decoder, directly output a class
 
-### Compare With Naive RNN
+### Compare With Naive RNN and GDBT (Gradient-Boosted Decision Trees)
 
-- Hand code RNN, 2 version encoding
-  - Word2Vec version
-  - BERT feature version
+- Both encoded with pre-trained BERT model
 - Compare output of same test inputs
 
 ### Report
