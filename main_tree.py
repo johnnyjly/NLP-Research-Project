@@ -4,8 +4,6 @@
 import torch
 import numpy as np
 import os, argparse, random
-import matplotlib.pyplot as plt
-from tqdm import tqdm
 
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import GradientBoostingRegressor
@@ -13,29 +11,6 @@ from sklearn.multioutput import MultiOutputRegressor
 from transformers import AutoTokenizer
 
 from preprocess import preprocess_data
-
-def plot_loss(train_loss, val_loss, val_acc):
-    train_loss = torch.tensor(train_loss).cpu().numpy()
-    val_loss = torch.tensor(val_loss).cpu().numpy()
-    val_acc = torch.tensor(val_acc).cpu().numpy()
-    plt.figure()
-    plt.plot(train_loss, label='Train Loss')
-    plt.plot(val_loss, label='Validation Loss')
-    # Add legend
-    plt.legend()
-    plt.title("Loss over iterations")
-    plt.xlabel("Iterations")
-    plt.ylabel("Loss")
-    plt.savefig("loss.png")
-
-    plt.clf()
-    plt.figure()
-    plt.plot(val_acc, label='Validation Accuracy')
-    plt.legend()
-    plt.title("Accuracy over iterations")
-    plt.xlabel("Iterations")
-    plt.ylabel("Accuracy")
-    plt.savefig("accuracy.png")
 
 def compute_loss(criterion, outputs, targets):
     loss1 = criterion(outputs[:, 0], targets[:, 0])
@@ -70,7 +45,7 @@ def main(args: argparse.Namespace):
 
     tokenize_dataset = tokenize_dataset.tolist()
 
-    train_dataset, test_dataset = train_test_split(tokenize_dataset, test_size=0.4)
+    train_dataset, test_dataset = train_test_split(tokenize_dataset, test_size=0.2)
     # test_dataset, val_dataset = train_test_split(test_dataset, test_size=0.5)
 
     # Reset indices after split
@@ -86,7 +61,7 @@ def main(args: argparse.Namespace):
     X_test = [data['input_ids'].squeeze(0).numpy()  for data in test_dataset]
     y_test = np.array([data['targets'].squeeze(0).numpy()  for data in test_dataset])
     
-    model = GradientBoostingRegressor(n_estimators=100, learning_rate=0.1, max_depth=3)
+    model = GradientBoostingRegressor(n_estimators=150, learning_rate=0.3, max_depth=3)
     multi_output_model = MultiOutputRegressor(model)
     multi_output_model.fit(X_train, y_train)
     
@@ -112,15 +87,8 @@ if __name__ == '__main__':
     parser.add_argument("--data_path", type=str, default='./data/data_cleaned_2021.csv')
     # parser.add_argument("--model", type=str, help='BertFeature, BertRNN, salaryRNN, salaryBERT', required=True)
     # Hyperparameters
-    parser.add_argument("--batch_size", type=int, default=10)
-    parser.add_argument("--epochs", type=int, default=100)
-    parser.add_argument("--lr", type=float, default=2e-5, help='learning rate')
     parser.add_argument("--seed", type=int, default=413, help='random seed')
-    parser.add_argument("--patience", type=int, default=10, help='early stopping patience')
-    # Predict
-    parser.add_argument("--use_trained", type=str, default=None, help='path to already trained model')
-    parser.add_argument("--predict", type=str, default=None, help='path to txt containing a job description we want to predict salary range')
-
+    
     arguments = parser.parse_args()
     random.seed(arguments.seed)
     torch.manual_seed(arguments.seed)
