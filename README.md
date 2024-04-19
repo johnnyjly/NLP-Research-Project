@@ -21,8 +21,8 @@ The model will automatically use CUDA environment if available.
 ### Training a new model
 ```
 python3 main.py 
-    --model {one of BertRNN/BertFeature/salaryRNN/salaryBERT} 
-    --lr {optional learning rate, default=2e-5} 
+	--model {one of BertRNN/BertFeature/salaryRNN/salaryBERT} 
+	--lr {optional learning rate, default=2e-5} 
 	--epochs {optional max epoch, default=500} 
 	--patience {optional patience until early stopping, default=10}
 ```
@@ -55,8 +55,7 @@ in `.pth` files. We have included the trained params of a BertRNN model `BertRNN
 ## Ideas
 
 - Use bert as pre-trained model, train with training dataset descriptions.
-- Discard job-category | company name; Keep job-description | job-requirements
-  | experience category
+- Discard job-category | company name; Keep job-description | job-requirements | experience category
 
 ## Steps
 
