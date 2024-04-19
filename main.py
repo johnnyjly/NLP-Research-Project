@@ -201,7 +201,7 @@ def main(args: argparse.Namespace):
 
     tokenize_dataset = tokenize_dataset.tolist()
 
-    train_dataset, test_dataset = train_test_split(tokenize_dataset, test_size=0.4)
+    train_dataset, test_dataset = train_test_split(tokenize_dataset, test_size=0.2)
     test_dataset, val_dataset = train_test_split(test_dataset, test_size=0.5)
 
     # Reset indices after split
