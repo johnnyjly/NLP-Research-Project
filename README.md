@@ -2,6 +2,8 @@
 
 The course project for CSC413 2024S
 
+See the [Final report](/Final_Report.pdf)
+
 ## Project Target
 
 - Create an NLP model such that user enter job description and exerience in
